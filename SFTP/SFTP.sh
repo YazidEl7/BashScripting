@@ -37,7 +37,7 @@ function Interface_File {
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=dhcp\nONBOOT=yes\nNAME=$2\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
-	elif [ $1 == 2 ]
+	elif [ $1 == 2]
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=static\nONBOOT=yes\nNAME=$2\nIPADDR=$3\nNETMASK=$4\nPREFIX=$5\nGATEWAY=$6\nDNS1=$7\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
@@ -133,7 +133,7 @@ do
 
 				if [ -f "$DIR" ]
 				then
-				File_Device=$(cat "/etc/sysconfig/network-scripts/ifcfg-${FilesNames[$j]}" | grep DEVICE | cut -d "=" -f 2)
+				File_Device=$(cat "/etc/sysconfig/network-scripts/ifcfg-${FilesNames[$j]}" | grep DEVICE | cut -d "=" -f 2) 
 
 					if [ "${Interfaces[$InterfaceNum]}" == "$File_Device" ]
 					then
@@ -145,26 +145,31 @@ do
 			done
 			#####################################################
 			Three "Choose :" "		1 - DHCP " "		2 - Static " " "
-			read -p "***	Type 1/2 and press [ENTER] : " BootProtocol
-			touch "/etc/sysconfig/network-scripts/ifcfg-$Devices_File"
+			K=0
+			while [ "$K" -ne 1 ]
+			do
+				read -p "***	Type 1/2 and press [ENTER] : " BootProtocol
+				touch "/etc/sysconfig/network-scripts/ifcfg-$Devices_File"
 
-			if [ $BootProtocol == 1 ]
-				then
-				Interface_File "1" "$Devices_File"
-
-			elif [ $BootProtocol == 2 ]
-				then
-				read -p "Type IP Address and press [ENTER] : " IP_Adress
-				read -p "Type Network Mask [ENTER] (ex: 255.255.255.0): " Net_Mask
-				read -p "Type IP Prefix and press [ENTER] (ex: 24) : " IP_Prefix
-				read -p "Type Gateway's IP Address  and press [ENTER] : " IP_Gateway
-				read -p "Type DNS's IP Address and press [ENTER] : " IP_DNS1
-				Interface_File "2" "$Devices_File" "$IP_Adress" "$Net_Mask" "$IP_Prefix" "$IP_Gateway" "$IP_DNS1"
-				printf "search Space\nnameserver $IP_DNS1\n" | tee /etc/resolv.conf
-			else 
-				Three "Invalid Choice"
-				break 1
-			fi
+				if [ $BootProtocol == 1 ]
+					then
+					Interface_File "1" "$Devices_File"
+					K=1
+			
+				elif [ $BootProtocol == 2 ]
+					then
+					read -p "Type IP Address and press [ENTER] : " IP_Adress
+					read -p "Type Network Mask [ENTER] (ex: 255.255.255.0): " Net_Mask
+					read -p "Type IP Prefix and press [ENTER] (ex: 24) : " IP_Prefix
+					read -p "Type Gateway's IP Address  and press [ENTER] : " IP_Gateway
+					read -p "Type DNS's IP Address and press [ENTER] : " IP_DNS1
+					Interface_File "2" "$Devices_File" "$IP_Adress" "$Net_Mask" "$IP_Prefix" "$IP_Gateway" "$IP_DNS1"
+					printf "search Space\nnameserver $IP_DNS1\n" | tee /etc/resolv.conf
+					K=1
+				else 
+					Three "Invalid Choice"
+				fi
+			done
 		else 
 			Three "Invalid Choice"
 			break 1
@@ -193,7 +198,9 @@ done
 ## End of Modification loop ##
 
 systemctl restart NetworkManager
-read -p "***	Do you want to Choose another step ? Type yes/no [Enter]: " Answer2
+
+Question "Do you want to Choose another step ? "
+read -p "***	Type yes/no [Enter]: " Answer2
 	if [ "$Answer2" == "yes" ]
 	then
 	read -p "***	Enter step number then press [Enter]: " S
@@ -205,10 +212,38 @@ fi
 ####################        	    Configuring SSH    		          ####################################
 if [ $S == 2 ]
 then
-	dnf install openssh-server -y
-	systemctl start sshd
-	systemctl enable sshd
-	S=3
+	exist=$(rpm -qa | grep -q openssh-server; echo $?) 
+	if [ $exist == 0 ]
+	then
+		Three "openssh-server already installed"
+	else
+		K=0
+		while [ "$K" -ne 1 ]
+		do
+			Installation_Success=$(dnf install openssh-server -y)
+			if [ $Installation_Success == 0]
+			then
+				Three "Installation Succeded"
+				k=1
+			else
+				Three "Installation of SSH Failed"
+			fi
+		done
+
+	if
+	Started=$(systemctl start sshd; echo $?)
+	Enabled=$(systemctl enable sshd; echo $?)
+	if [ $Started == 0 && $Enabled == 0]
+	then
+		S=3
+	elif [ $Started == 0 && $Enabled != 0]
+	then
+		Three "Error while enabling the ssh service"
+	elif [ $Started != 0 && $Enabled == 0]
+		Three "Error while starting the service"
+	then
+	
+	fi
 fi
 ##############################################################################################################
 ####################        	    Configuring FTP    		          ####################################
@@ -228,10 +263,20 @@ then
 	chown -R mysftpuser:sftpusers /Data/mysftpuser/Upload
 	# Configuring SSH daemon for sftpusers group
 	# Add at the end of the file :
-	sshd_File_Config "/etc/ssh/sshd_config"
+	sshd_File_Config "/etc/ssh/sshd_config"    		### Checking existence before appending, to avoide duplicate
 
 	#################################
-	systemctl restart sshd
+	while [ "$K" -ne 1 ]
+	do
+	Restarting_SSH=$(systemctl restart sshd)
+		if [ $Restarting_SSH == 0 ]
+		then
+			Three "SSH Restarted successfully"
+			k=1
+		else
+			Three "SSH Failed to Restart, Might be due to error in /etc/ssh/sshd_config"
+		fi
+	done
 	S=4
 fi
 ##############################################################################################################
