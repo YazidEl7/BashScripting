@@ -1,5 +1,5 @@
 #!/bin/bash
-####################################################################################################################
+####################################################################################################################																					
 #############					SFTP Configuration					############
 #############						Root folder of sftp : /Data			############
 #############						sftp users group : sftpusers			############
@@ -95,6 +95,9 @@ i=$Count_Devices
 ##echo $((3 == $i))## statement eval
 #################################################################################################
 #####################	Looping To Modify interfaces configs 	#################################
+TT=0 # Outer loop will give second chances if invalid interface choices has been chosen
+while [ "$TT" -ne 1 ]
+do
 while [ "$T" -ne 1 ]
 do
 	#####################################################################
@@ -141,7 +144,7 @@ do
 				fi
 			done
 			#####################################################
-			Three "Choose :" "		1 - DHCP " "		2 - DHCP " " "
+			Three "Choose :" "		1 - DHCP " "		2 - Static " " "
 			read -p "***	Type 1/2 and press [ENTER] : " BootProtocol
 			touch "/etc/sysconfig/network-scripts/ifcfg-$Devices_File"
 
@@ -157,11 +160,20 @@ do
 				read -p "Type Gateway's IP Address  and press [ENTER] : " IP_Gateway
 				read -p "Type DNS's IP Address and press [ENTER] : " IP_DNS1
 				Interface_File "2" "$Devices_File" "$IP_Adress" "$Net_Mask" "$IP_Prefix" "$IP_Gateway" "$IP_DNS1"
+				printf "search Space\nnameserver $IP_DNS1\n" | tee /etc/resolv.conf
+			else 
+				Three "Invalid Choice"
+				break 1
 			fi
+		else 
+			Three "Invalid Choice"
+			break 1
 		fi
 		#############################################################
 	else 
-	exit 1
+	T=1 
+	TT=1
+	break 1
 	fi
         #####################################################################
 Three " "
@@ -174,10 +186,12 @@ Three " "
 		Answer="yes"
 	else
 		T=1 
+		TT=1
 	fi
 done
+done
 ## End of Modification loop ##
-printf "search Space\nnameserver $IP_DNS1\n" | tee /etc/resolv.conf
+
 systemctl restart NetworkManager
 read -p "***	Do you want to Choose another step ? Type yes/no [Enter]: " Answer2
 	if [ "$Answer2" == "yes" ]
