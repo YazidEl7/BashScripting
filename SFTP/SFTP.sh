@@ -37,7 +37,7 @@ function Interface_File {
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=dhcp\nONBOOT=yes\nNAME=$2\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
-	elif [ $1 == 2]
+	elif [ $1 == 2 ]
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=static\nONBOOT=yes\nNAME=$2\nIPADDR=$3\nNETMASK=$4\nPREFIX=$5\nGATEWAY=$6\nDNS1=$7\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
@@ -133,7 +133,7 @@ do
 
 				if [ -f "$DIR" ]
 				then
-				File_Device=($(cat "/etc/sysconfig/network-scripts/ifcfg-${FilesNames[$j]}" | grep DEVICE | cut -d "=" -f 2)) 
+				File_Device=$(cat "/etc/sysconfig/network-scripts/ifcfg-${FilesNames[$j]}" | grep DEVICE | cut -d "=" -f 2)
 
 					if [ "${Interfaces[$InterfaceNum]}" == "$File_Device" ]
 					then
@@ -251,7 +251,7 @@ DefaultZone=$(firewall-cmd --get-default-zone)
 Interfaces=($(firewall-cmd --list-interfaces))
 
 ## "i" is the number of active zones
-i=($(firewall-cmd --get-active-zones | cut -d " " -f 1 | wc -w))
+i=$(firewall-cmd --get-active-zones | cut -d " " -f 1 | wc -w)
 
 ActiveZone=($(firewall-cmd --get-active-zones | cut -d " " -f 1))
 
@@ -286,11 +286,11 @@ ActiveZone=($(firewall-cmd --get-active-zones | cut -d " " -f 1))
 	Header "Interface's zones"
 
 	# "i" is the number of interfaces 
-	i=($(firewall-cmd --list-interfaces | wc -w))
+	i=$(firewall-cmd --list-interfaces | wc -w)
 
 	for (( j=0; j<$i; j++ ))
 	do
-		Interfaces_Zone=($(firewall-cmd --get-zone-of-interface=${Interfaces[$j]}))
+		Interfaces_Zone=$(firewall-cmd --get-zone-of-interface=${Interfaces[$j]})
 		echo "***	 	"$((j+1))"-" ${Interfaces[$j]} ", Zone : "$Interfaces_Zone
 		Allowed_Services=($(firewall-cmd --info-zone=$Interfaces_Zone | grep services))
 		Three " " "Zone : $Interfaces_Zone, ${Allowed_Services[@]}" " "
