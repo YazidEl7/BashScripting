@@ -6,7 +6,7 @@
 #############						sftp user : mysftpuser				############
 #############					Directory of mysftpuser : /Data/mysftpuser/Upload	############
 ####################################################################################################################
-#################################		Header			###########################################
+#################################		Header			############################################
 function Header {
 	echo "***					  	  ***"
 	echo "*****************************************************"
@@ -37,13 +37,13 @@ function Interface_File {
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=dhcp\nONBOOT=yes\nNAME=$2\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
-	elif [ $1 == 2]
+	elif [ $1 == 2 ]
 		then
 		printf "TYPE=Ethernet\nDEVICE=$2\nBOOTPROTO=static\nONBOOT=yes\nNAME=$2\nIPADDR=$3\nNETMASK=$4\nPREFIX=$5\nGATEWAY=$6\nDNS1=$7\n" >> /etc/sysconfig/network-scripts/ifcfg-$2
 
 	fi	
 }
-############################			sshd_File_config			##########################
+############################			sshd_File_config			#########################
 function sshd_File_config {
 	printf "Match Group sftpusers\n" >> $1
 	printf '%s\n' "ChrootDirectory /Data/%u" >> $1
