@@ -6,7 +6,7 @@
 #############						sftp user : mysftpuser				############
 #############					Directory of mysftpuser : /Data/mysftpuser/Upload	############
 ####################################################################################################################
-#################################		Header			############################################
+#################################		Header			###########################################
 function Header {
 	echo "***					  	  ***"
 	echo "*****************************************************"
@@ -43,7 +43,7 @@ function Interface_File {
 
 	fi	
 }
-############################			sshd_File_config			#########################
+############################			sshd_File_config			##########################
 function sshd_File_config {
 	printf "Match Group sftpusers\n" >> $1
 	printf '%s\n' "ChrootDirectory /Data/%u" >> $1
@@ -120,7 +120,7 @@ do
 
 		#############################################################
 
-		if [ $(($InterfaceNum < $i)) ]
+		if [ $InterfaceNum -lt $i ]
 		then
 		Three " " "- ${Interfaces[$InterfaceNum]}"
 
@@ -167,18 +167,23 @@ do
 					printf "search Space\nnameserver $IP_DNS1\n" | tee /etc/resolv.conf
 					K=1
 				else 
-					Three "Invalid Choice"
+					Three "Invalid Choice !! " " "
 				fi
 			done
 		else 
-			Three "Invalid Choice"
+			Three "Invalid Choice !! " " "
 			break 1
 		fi
 		#############################################################
+	elif [ "$Answer" == "no" ] 
+	then
+		T=1 
+		TT=1
+		break 1
 	else 
-	T=1 
-	TT=1
-	break 1
+		Three "Invalid Choice !! " " "
+		read -p "***	type yes/no and press [Enter]: " Answer
+		break 1
 	fi
         #####################################################################
 Three " "
@@ -196,16 +201,26 @@ Three " "
 done
 done
 ## End of Modification loop ##
-
-systemctl restart NetworkManager
-
+## while loop to keep restarting network manager
+Restarted=1
+Counter=1
+while [ $Restarted -ne 0 ] && [ $Counter -ne 4 ]
+do
+	Restarted=$(systemctl restart NetworkManager 2> /dev/null; echo $?)
+	Counter=$((Counter+1))
+done
+	if [ $Restarted -ne 0 ]
+	then
+	Three "Network Manager hasn't been restarted successfully !!"
+	fi
+Line
 Question "Do you want to Choose another step ? "
 read -p "***	Type yes/no [Enter]: " Answer2
 	if [ "$Answer2" == "yes" ]
 	then
-	read -p "***	Enter step number then press [Enter]: " S
-	else
-	S=2
+		read -p "***	Enter step number then press [Enter]: " S
+		else
+		S=2											
 	fi
 fi
 ##############################################################################################################
@@ -220,29 +235,33 @@ then
 		K=0
 		while [ "$K" -ne 1 ]
 		do
-			Installation_Success=$(dnf install openssh-server -y)
+			Installation_Success=$(dnf install openssh-server -y 2> /dev/null; echo $?)
 			if [ $Installation_Success == 0]
 			then
 				Three "Installation Succeded"
 				k=1
 			else
-				Three "Installation of SSH Failed"
+				Three "Installation of SSH Failed !! "
 			fi
 		done
 
-	if
-	Started=$(systemctl start sshd; echo $?)
-	Enabled=$(systemctl enable sshd; echo $?)
-	if [ $Started == 0 && $Enabled == 0]
+	fi
+	Started=$(systemctl start sshd 2> /dev/null; echo $?)
+	Enabled=$(systemctl enable sshd 2> /dev/null; echo $?)
+	if [ $Started == 0 ] && [ $Enabled == 0 ]
 	then
 		S=3
-	elif [ $Started == 0 && $Enabled != 0]
+
+	elif [ $Started == 0 ] && [ $Enabled != 0 ]
 	then
-		Three "Error while enabling the ssh service"
-	elif [ $Started != 0 && $Enabled == 0]
-		Three "Error while starting the service"
+		Three "Error while enabling the ssh service !! "
+
+	elif [ $Started != 0 ] && [ $Enabled == 0 ]
 	then
-	
+		Three "Error while starting the service !! "
+
+	else
+		Three "Failed to start and enable the srvice !! "
 	fi
 fi
 ##############################################################################################################
@@ -368,8 +387,4 @@ fi
 
 	Three "test on a client by typing : sftp mysftpuser@IP (ex: sftp mysftpuser@192.168.5.5)"
 ##############################################################################################################
-
-
-
-
 
