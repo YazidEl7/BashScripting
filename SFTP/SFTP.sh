@@ -49,6 +49,28 @@ function sshd_File_config {
 	printf '%s\n' "ChrootDirectory /Data/%u" >> $1
 	printf "AllowTcpForwarding no\nForceCommand internal-sftp\n" >> $1
 }
+############################			sshd_File_config_Check			##########################
+function sshd_File_config_Check {
+	#cat /etc/ssh/sshd_config | grep "Match Group sftp"
+	Line1_Number=$(cat /etc/ssh/sshd_config | grep -n "Match Group sftp" | cut -d ':' -f 1)
+	Matched=$(cat /etc/ssh/sshd_config | grep -n "Match Group sftp" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+
+	#cat /etc/ssh/sshd_config | grep "ChrootDirectory /Data/%u"
+	Line2_Number=$(cat /etc/ssh/sshd_config | grep -n "ChrootDirectory /Data/%u" | cut -d ':' -f 1)
+	M=$(cat /etc/ssh/sshd_config | grep -n "ChrootDirectory /Data/%u" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	Matched=$((Matched+M))
+
+	#cat /etc/ssh/sshd_config | grep "AllowTcpForwarding no"
+	Line3_Number=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" | cut -d ':' -f 1)
+	M=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	Matched=$((Matched+M))
+
+	#cat /etc/ssh/sshd_config | grep "ForceCommand internal-sftp"
+	Line4_Number=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" | cut -d ':' -f 1)
+	M=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	Matched=$((Matched+M))
+
+}
 ###############################################################################################################
 
 Header "SFTP Configuration"
@@ -57,6 +79,8 @@ Header "Ethernet Status"
 read -p "***	Enter step number then press [Enter]: " S
 
 ###############################################################################################################
+Three "Enter SU password below"
+su
 ####################            Configuring Network Interface             #####################################
 if [ $S == 1 ]
 then
@@ -211,7 +235,7 @@ do
 done
 	if [ $Restarted -ne 0 ]
 	then
-	Three "Network Manager hasn't been restarted successfully !!"
+	Three "Network Manager hasn't been restarted successfully !!" "We recommend that you fix the problem" "then launch the script again"
 	fi
 Line
 Question "Do you want to Choose another step ? "
@@ -258,10 +282,10 @@ then
 
 	elif [ $Started != 0 ] && [ $Enabled == 0 ]
 	then
-		Three "Error while starting the service !! "
+		Three "Error while starting the service !! " "Fix the problem and start the script again, choose step 2 !!"
 
 	else
-		Three "Failed to start and enable the srvice !! "
+		Three "Failed to start and enable the service !! " "Fix the problem and start the script again, choose step 2 !!"
 	fi
 fi
 ##############################################################################################################
@@ -282,9 +306,19 @@ then
 	chown -R mysftpuser:sftpusers /Data/mysftpuser/Upload
 	# Configuring SSH daemon for sftpusers group
 	# Add at the end of the file :
-	sshd_File_Config "/etc/ssh/sshd_config"    		### Checking existence before appending, to avoide duplicate
+	sshd_File_config_Check			### Checking existence before appending, to avoide duplicate
+
+	if [ $Line1_Number < $Line2_Number ] && [ $Line2_Number < $Line3_Number ] && [ $Line3_Number < $Line4_Number ]
+	then
+		Three "Entries Already Exists"
+	elif [ $Matched != 0 ]	
+	then	
+		sshd_File_Config "/etc/ssh/sshd_config"
+	fi
+	    					### 
 
 	#################################
+	k=0
 	while [ "$K" -ne 1 ]
 	do
 	Restarting_SSH=$(systemctl restart sshd)
@@ -292,11 +326,12 @@ then
 		then
 			Three "SSH Restarted successfully"
 			k=1
+			S=4
 		else
-			Three "SSH Failed to Restart, Might be due to error in /etc/ssh/sshd_config"
+			Three "SSH Failed to Restart, Might be due to error in /etc/ssh/sshd_config" "Fix the problem and start the script again, choose step 3 !!"
 		fi
 	done
-	S=4
+
 fi
 ##############################################################################################################
 ####################        	    Configuring Firewall    	          ####################################
