@@ -1,4 +1,5 @@
 #!/bin/bash
+# Please report any errors with screenshots, for improvement purpose
 ####################################################################################################################																					
 #############					SFTP Configuration					############
 #############						Root folder of sftp : /Data			############
@@ -44,7 +45,7 @@ function Interface_File {
 	fi	
 }
 ############################			sshd_File_config			##########################
-function sshd_File_config {
+function sshd_File_Config {
 	printf "Match Group sftpusers\n" >> $1
 	printf '%s\n' "ChrootDirectory /Data/%u" >> $1
 	printf "AllowTcpForwarding no\nForceCommand internal-sftp\n" >> $1
@@ -53,23 +54,44 @@ function sshd_File_config {
 function sshd_File_config_Check {
 	#cat /etc/ssh/sshd_config | grep "Match Group sftp"
 	Line1_Number=$(cat /etc/ssh/sshd_config | grep -n "Match Group sftp" | cut -d ':' -f 1)
-	Matched=$(cat /etc/ssh/sshd_config | grep -n "Match Group sftp" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	Matched=$(cat /etc/ssh/sshd_config | grep -n "Match Group sftp" > /dev/null; echo $?)
 
 	#cat /etc/ssh/sshd_config | grep "ChrootDirectory /Data/%u"
 	Line2_Number=$(cat /etc/ssh/sshd_config | grep -n "ChrootDirectory /Data/%u" | cut -d ':' -f 1)
-	M=$(cat /etc/ssh/sshd_config | grep -n "ChrootDirectory /Data/%u" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	M=$(cat /etc/ssh/sshd_config | grep -n "ChrootDirectory /Data/%u" > /dev/null; echo $?)
 	Matched=$((Matched+M))
 
 	#cat /etc/ssh/sshd_config | grep "AllowTcpForwarding no"
-	Line3_Number=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" | cut -d ':' -f 1)
-	M=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	Line3_Number=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" | cut -d ':' -f 1 | tail -1)
+	M=$(cat /etc/ssh/sshd_config | grep -n "AllowTcpForwarding no" > /dev/null; echo $?)
 	Matched=$((Matched+M))
 
 	#cat /etc/ssh/sshd_config | grep "ForceCommand internal-sftp"
 	Line4_Number=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" | cut -d ':' -f 1)
-	M=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" | cut -d ':' -f 1 2>&1 /dev/null; echo $?)
+	M=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" > /dev/null; echo $?)
 	Matched=$((Matched+M))
+	Three " ttttttttttttttttttt $Matched"
 
+}
+############################			start_enable				##########################
+function start_enable {
+	Started=$(systemctl start $1 2> /dev/null; echo $?)
+	Enabled=$(systemctl enable $1 2> /dev/null; echo $?)
+	if [ $Started == 0 ] && [ $Enabled == 0 ]
+	then
+		S=$2
+
+	elif [ $Started == 0 ] && [ $Enabled != 0 ]
+	then
+		Three "Error while enabling the $1 service !! "
+
+	elif [ $Started != 0 ] && [ $Enabled == 0 ]
+	then
+		Three "Error while starting the service !! " "Fix the problem and start the script again, choose step 2 !!"
+
+	else
+		Three "Failed to start and enable the service !! " "Fix the problem and start the script again, choose step 2 !!"
+	fi
 }
 ###############################################################################################################
 
@@ -79,8 +101,6 @@ Header "Ethernet Status"
 read -p "***	Enter step number then press [Enter]: " S
 
 ###############################################################################################################
-Three "Enter SU password below"
-su
 ####################            Configuring Network Interface             #####################################
 if [ $S == 1 ]
 then
@@ -100,7 +120,7 @@ Line
 set +m; shopt -s lastpipe
 
 # Using nmcli to get ethernet configured and not configured devices, cuz the new ones won't have a file at /network-scripts/
-Interfaces=($(nmcli device status | grep ethernet | cut -d " " -f 1 ))
+Interfaces=($(nmcli device status | grep ethernet | cut -d " " -f 1 ))             ##
 
 : 'Now we should check if their files existed upon modification, the /network-scripts/ will have files ordered by connection name and the nmcli will have it ordered by device name, and we won t always find a device and its name same '
 ##FEx=($(cat /etc/sysconfig/network-scripts/ifcfg-* | grep DEVICE | cut -d "=" -f 2))##
@@ -170,7 +190,7 @@ do
 			#####################################################
 			Three "Choose :" "		1 - DHCP " "		2 - Static " " "
 			K=0
-			while [ "$K" -ne 1 ]
+			while [ $K -ne 1 ]
 			do
 				read -p "***	Type 1/2 and press [ENTER] : " BootProtocol
 				touch "/etc/sysconfig/network-scripts/ifcfg-$Devices_File"
@@ -230,7 +250,7 @@ Restarted=1
 Counter=1
 while [ $Restarted -ne 0 ] && [ $Counter -ne 4 ]
 do
-	Restarted=$(systemctl restart NetworkManager 2> /dev/null; echo $?)
+	Restarted=$(systemctl restart NetworkManager; echo $?)
 	Counter=$((Counter+1))
 done
 	if [ $Restarted -ne 0 ]
@@ -257,10 +277,10 @@ then
 		Three "openssh-server already installed"
 	else
 		K=0
-		while [ "$K" -ne 1 ]
+		while [ $K -ne 1 ]
 		do
 			Installation_Success=$(dnf install openssh-server -y 2> /dev/null; echo $?)
-			if [ $Installation_Success == 0]
+			if [ $Installation_Success == 0 ]
 			then
 				Three "Installation Succeded"
 				k=1
@@ -270,23 +290,7 @@ then
 		done
 
 	fi
-	Started=$(systemctl start sshd 2> /dev/null; echo $?)
-	Enabled=$(systemctl enable sshd 2> /dev/null; echo $?)
-	if [ $Started == 0 ] && [ $Enabled == 0 ]
-	then
-		S=3
-
-	elif [ $Started == 0 ] && [ $Enabled != 0 ]
-	then
-		Three "Error while enabling the ssh service !! "
-
-	elif [ $Started != 0 ] && [ $Enabled == 0 ]
-	then
-		Three "Error while starting the service !! " "Fix the problem and start the script again, choose step 2 !!"
-
-	else
-		Three "Failed to start and enable the service !! " "Fix the problem and start the script again, choose step 2 !!"
-	fi
+	start_enable "sshd" 3
 fi
 ##############################################################################################################
 ####################        	    Configuring FTP    		          ####################################
@@ -294,10 +298,10 @@ if [ $S == 3 ]
 then
 	Line
 	# Creating SFTP's root folder
-	mkdir /Data/ 
-	chmod 701 /Data
+	mkdir /Data/ 2> /dev/null
+	chmod 701 /Data 2> /dev/null
 	# Creating Users
-	groupadd sftpusers
+	groupadd sftpusers 2> /dev/null
 	useradd -g sftpusers -d /Upload -s /usr/sbin/nologin mysftpuser
 	Three "Type the password you wanna use for \"mysftpuser\""		
 	passwd mysftpuser
@@ -308,10 +312,10 @@ then
 	# Add at the end of the file :
 	sshd_File_config_Check			### Checking existence before appending, to avoide duplicate
 
-	if [ $Line1_Number < $Line2_Number ] && [ $Line2_Number < $Line3_Number ] && [ $Line3_Number < $Line4_Number ]
+	if [[ $Line1_Number < $Line2_Number ]] && [[ $Line2_Number < $Line3_Number ]] && [[ $Line3_Number < $Line4_Number ]]
 	then
-		Three "Entries Already Exists"
-	elif [ $Matched != 0 ]	
+		Three " " "Entries Already Exists"
+	elif [ $Matched -ne 0 ]	
 	then	
 		sshd_File_Config "/etc/ssh/sshd_config"
 	fi
@@ -319,16 +323,16 @@ then
 
 	#################################
 	k=0
-	while [ "$K" -ne 1 ]
+	while [ $k -ne 1 ]
 	do
-	Restarting_SSH=$(systemctl restart sshd)
+	Restarting_SSH=$(systemctl restart sshd; echo $?)
 		if [ $Restarting_SSH == 0 ]
 		then
-			Three "SSH Restarted successfully"
+			Three " " "SSH Restarted successfully"
 			k=1
 			S=4
 		else
-			Three "SSH Failed to Restart, Might be due to error in /etc/ssh/sshd_config" "Fix the problem and start the script again, choose step 3 !!"
+			Three " " "SSH Failed to Restart, Might be due to error in /etc/ssh/sshd_config" "Fix the problem and start the script again, choose step 3 !!"
 		fi
 	done
 
@@ -339,8 +343,7 @@ if [ $S == 4 ]
 then
 	#############################################
 	Line
-	systemctl enable firewalld                        
-	systemctl start firewalld                        
+	start_enable "firewalld" 4                       
 	#############################################
 DefaultZone=$(firewall-cmd --get-default-zone)
 
@@ -378,7 +381,13 @@ ActiveZone=($(firewall-cmd --get-active-zones | cut -d " " -f 1))
 		if [ "$Answer" == "yes" ]
 		then
 		read -p "***	Type zone's name : " Zone_Name
-		firewall-cmd --set-default-zone=$Zone_Name --permanent
+		Changed=$(firewall-cmd --set-default-zone=$Zone_Name --permanent 2>&1 /dev/null; echo $?)
+			if [ $Changed == 0 ]
+			then
+				Three " " "Default Zone changed successfully"
+			else
+				Three " " "Failed to change Default zone, Might be due to invalid zone name !!"
+			fi
 		fi
 	################################################################
 	############		Interfaces Zones		########
@@ -399,27 +408,66 @@ ActiveZone=($(firewall-cmd --get-active-zones | cut -d " " -f 1))
 	Three " " 
 	Question "Would you like to change the zone of an interface ? "
 	read -p "***	Type yes/no : " Answer
+	k=0
+	kk=0
+		while [ $k -eq 0 ] || [ $kk -eq 1 ]
+		do
 		if [ "$Answer" == "yes" ]
 		then
-		read -p "***	Type zone's name : " Zone_Name
-		read -p "***	Type Interface's Name : " Interface_Name
-		firewall-cmd --zone=$Zone_Name --change-interface=$Interface_Name --permanent
+			read -p "***	Type zone's name : " Zone_Name
+			read -p "***	Type Interface's Name : " Interface_Name
+			Changed=$(firewall-cmd --zone=$Zone_Name --change-interface=$Interface_Name --permanent 2>&1 /dev/null; echo $?)
+				if [ $Changed == 0 ]
+				then
+					Three " " "The zone of the interface changed successfully"
+				else
+					Three " " "Failed to change The zone of the interface, Might be due to invalid zone or interface name !!"
+					kk=1
+				fi
+			k=1
+		elif [ "$Answer" == "no" ]
+		then
+			Three " test"
+			k=1
+		else
+			Three " " "Invalid !!"
+		read -p "***	Type yes/no : " Answer
 		fi
+		done
 	################################################################
 	###############    Allowing the service  	################
 	Header "Allowing service"
 	read -p "***	Type the name of zone you wanna add the service to : " Zone_Name
 	if [ $Zone_Name != '' ]
 	then
-		firewall-cmd --zone=$Zone_Name --add-service=ssh --permanent 
+		Added=$(firewall-cmd --zone=$Zone_Name --add-service=ssh --permanent > /dev/null; echo $?) 
+			if [ $Added == 0 ]
+			then
+				Three " " "Service Added successfully"
+			else
+				Three " " "Failed to add the service, Might be due to invalid zone name !!"
+			fi
 	else
-		firewall-cmd --add-service=ssh --permanent
+		Added=$(firewall-cmd --add-service=ssh --permanent 2>&1 /dev/null; echo $?)
+			if [ $Added == 0 ]
+			then
+				Three " " "Service Added successfully"
+			else
+				Three " " "Failed to add the service !!"
+			fi
 	fi   
 	firewall-cmd --runtime-to-permanent           
-	firewall-cmd --reload                                                   
+	reloaded=$(firewall-cmd --reload > /dev/null; echo $?)  
+		if [ $reloaded == 0 ]
+		then
+			Three " " "Firewall Reloaded successfully"
+			Three "test on a client by typing : sftp mysftpuser@IP (ex: sftp mysftpuser@192.168.5.5)"
+		else
+			Three " " "Failed to reload firewall !!"
+		fi                                                 
 
 fi
 
-	Three "test on a client by typing : sftp mysftpuser@IP (ex: sftp mysftpuser@192.168.5.5)"
+	
 ##############################################################################################################
 
