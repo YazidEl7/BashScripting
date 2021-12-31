@@ -70,7 +70,6 @@ function sshd_File_config_Check {
 	Line4_Number=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" | cut -d ':' -f 1)
 	M=$(cat /etc/ssh/sshd_config | grep -n "ForceCommand internal-sftp" > /dev/null; echo $?)
 	Matched=$((Matched+M))
-	Three " ttttttttttttttttttt $Matched"
 
 }
 ############################			start_enable				##########################
